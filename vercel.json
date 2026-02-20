@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/ssrf-test",
+      "destination": "http://169.254.169.254/computeMetadata/v1/instance/hostname",
+      "permanent": false
+    }
+  ]
+}
