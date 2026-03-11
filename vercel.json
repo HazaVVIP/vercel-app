@@ -1,0 +1,13 @@
+{
+  "headers": [
+    {
+      "source": "/tempo-v2.apk",
+      "headers": [
+        { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
+        { "key": "Content-Disposition", "value": "attachment; filename=\"tempo-v2.apk\"" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "X-Powered-By", "value": "PHP/7.3.11" }
+      ]
+    }
+  ]
+}
